@@ -1,0 +1,137 @@
+---
+- hosts: backend
+  become: yes
+  vars:
+    app_name: todo-list
+    app_port: 8080
+    github_repo: https://github.com/captain-yun7/aws-labs-v1.git
+    app_dir: /opt/{{ app_name }}
+    service_name: "{{ app_name }}"
+    
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        
+    - name: Install Java 17
+      apt:
+        name: openjdk-17-jdk
+        state: present
+        
+    - name: Install Git
+      apt:
+        name: git
+        state: present
+        
+    - name: Remove old Gradle
+      apt:
+        name: gradle
+        state: absent
+        
+    - name: Download and install latest Gradle
+      shell: |
+        cd /tmp
+        wget https://services.gradle.org/distributions/gradle-8.5-bin.zip
+        unzip -q gradle-8.5-bin.zip
+        mv gradle-8.5 /opt/gradle
+        ln -sf /opt/gradle/bin/gradle /usr/local/bin/gradle
+      args:
+        creates: /opt/gradle/bin/gradle
+        
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        
+    - name: Clone or update repository
+      git:
+        repo: "{{ github_repo }}"
+        dest: "{{ app_dir }}/source"
+        force: yes
+      become_user: ubuntu
+      
+    - name: Initialize Gradle wrapper
+      shell: |
+        cd {{ app_dir }}/source/apps/todo-list/backend
+        /usr/local/bin/gradle wrapper --gradle-version=8.5
+      become_user: ubuntu
+      environment:
+        JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+        PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
+      
+    - name: Make gradlew executable
+      file:
+        path: "{{ app_dir }}/source/apps/todo-list/backend/gradlew"
+        mode: '0755'
+      become_user: ubuntu
+      
+    - name: Build Spring Boot application with Gradle
+      shell: |
+        cd {{ app_dir }}/source/apps/todo-list/backend
+        ./gradlew clean bootJar
+      become_user: ubuntu
+      environment:
+        JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+      
+    - name: Find JAR file
+      find:
+        paths: "{{ app_dir }}/source/apps/todo-list/backend/build/libs"
+        patterns: "*.jar"
+        excludes: "*-plain.jar"
+      register: jar_files
+      
+    - name: Copy JAR file
+      copy:
+        src: "{{ jar_files.files[0].path }}"
+        dest: "{{ app_dir }}/{{ app_name }}.jar"
+        remote_src: yes
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+        
+    - name: Create systemd service file
+      copy:
+        dest: /etc/systemd/system/{{ service_name }}.service
+        content: |
+          [Unit]
+          Description={{ app_name }} Spring Boot Application
+          After=network.target
+          
+          [Service]
+          Type=simple
+          User=ubuntu
+          WorkingDirectory={{ app_dir }}
+          ExecStart=/usr/bin/java -jar {{ app_dir }}/{{ app_name }}.jar
+          Restart=always
+          RestartSec=10
+          Environment=SERVER_PORT={{ app_port }}
+          
+          [Install]
+          WantedBy=multi-user.target
+          
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+        
+    - name: Enable and start service
+      systemd:
+        name: "{{ service_name }}"
+        enabled: yes
+        state: restarted
+        
+    - name: Wait for application to start
+      wait_for:
+        port: "{{ app_port }}"
+        delay: 10
+        timeout: 120
+        
+    - name: Check service status
+      systemd:
+        name: "{{ service_name }}"
+      register: service_status
+      
+    - name: Display service status
+      debug:
+        msg: "Service {{ service_name }} is {{ service_status.status.ActiveState }}"

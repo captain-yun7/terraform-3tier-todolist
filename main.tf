@@ -31,7 +31,6 @@ module "backend" {
   project_name       = var.project_name
   vpc_id             = module.vpc.vpc_id
   public_subnet_ids  = module.vpc.public_subnet_ids
-  private_subnet_ids = module.vpc.private_subnet_ids
   instance_type      = var.backend_instance_type
   key_name           = var.key_name
 }
@@ -54,6 +53,6 @@ module "frontend" {
   
   environment          = var.environment
   project_name         = var.project_name
-  backend_alb_dns_name = module.backend.alb_dns_name
+  backend_public_ip    = module.backend.backend_public_ip
   s3_bucket_name       = var.frontend_bucket_name
 }

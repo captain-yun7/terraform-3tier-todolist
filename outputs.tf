@@ -3,9 +3,14 @@ output "vpc_id" {
   value       = module.vpc.vpc_id
 }
 
-output "backend_alb_url" {
-  description = "Backend ALB URL"
-  value       = "http://${module.backend.alb_dns_name}"
+output "backend_public_ip" {
+  description = "Backend EC2 public IP"
+  value       = module.backend.backend_public_ip
+}
+
+output "backend_url" {
+  description = "Backend URL"
+  value       = "http://${module.backend.backend_public_ip}:8080"
 }
 
 output "frontend_url" {

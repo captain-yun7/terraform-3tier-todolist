@@ -14,14 +14,10 @@ variable "vpc_id" {
 }
 
 variable "public_subnet_ids" {
-  description = "Public subnet IDs for ALB"
+  description = "Public subnet IDs for EC2 instance"
   type        = list(string)
 }
 
-variable "private_subnet_ids" {
-  description = "Private subnet IDs for EC2 instances"
-  type        = list(string)
-}
 
 variable "instance_type" {
   description = "EC2 instance type"
@@ -29,23 +25,8 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
-variable "min_size" {
-  description = "Minimum number of instances in ASG"
-  type        = number
-  default     = 1
-}
 
-variable "max_size" {
-  description = "Maximum number of instances in ASG"
-  type        = number
-  default     = 3
-}
 
-variable "desired_capacity" {
-  description = "Desired number of instances in ASG"
-  type        = number
-  default     = 2
-}
 
 variable "app_port" {
   description = "Application port (Spring Boot)"
@@ -56,5 +37,5 @@ variable "app_port" {
 variable "key_name" {
   description = "EC2 Key Pair name for SSH access"
   type        = string
-  default     = ""
+  default     = "3tier-terraform-key-pair"
 }

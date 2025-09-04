@@ -8,8 +8,8 @@ variable "project_name" {
   type        = string
 }
 
-variable "backend_alb_dns_name" {
-  description = "Backend ALB DNS name for API calls"
+variable "backend_public_ip" {
+  description = "Backend EC2 public IP for API calls"
   type        = string
 }
 
